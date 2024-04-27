@@ -6,38 +6,91 @@
  *   3. Paste this code into your browser's dev console.
  *   4. Refresh the page
  *   5. The bot followers matching the BOT_USERNAME_REGEX below will be removed.
- *
+ *
  *   Warning: Be careful! This may remove non-bot users ;) see regex below.
  */
 
-const BOT_USERNAME_REGEX = /\d{5,}$/;
-const BOT_BIO_REGEXS = [/usdt/gi, /camshat/gi, /letscam/gi, /myfreecontent/gi];
+const BOT_USERNAME_REGEX = /\d{5,}$/; // spam bot username regex
+const BOT_BIO_REGEXS = [/usdt/gi, /camshat/gi, /letscam/gi, /myfreecontent/gi]; // spam bot bio keywords.
+const FOLLOWING_RATIO = 0.1; // ratio between followers / following
+const BOT_NUM_FOLLOWING = 2000; // max number of followers for FOLLOWING requirement to take effect.
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const isBot = (parentElement) => {
+// Highlight / target an element
+const target = (element) => {
+  element.style.border = "1px solid #c52121";
+};
+
+const stringToInt = (integerString) => {
+  return parseInt(integerString.replace(",", "").replace(".", ""));
+};
+
+const getFollowerInfo = async (element) => {
+  const link = element.querySelector("a");
+  link.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+  await delay(1000);
+  const card = document.querySelector('[data-testid="HoverCard"]');
+
+  if (!card) return;
+
+  const links = Array.from(card.getElementsByTagName("a"));
+
+  const followers = links.find((link) =>
+    link.href.includes("/verified_followers"),
+  ).children[0];
+  const following = links.find((link) => link.href.includes("/following"))
+    .children[0];
+
+  // clean up
+  await delay(1000);
+  card.remove();
+
+  return {
+    following: stringToInt(following.innerText),
+    followers: stringToInt(followers.innerText),
+  };
+};
+
+const isBot = async (parentElement) => {
   const link = parentElement.querySelector("a");
   const username = link.href.split("/").pop();
 
+  // Step 1: Does username match username regex?
   if (BOT_USERNAME_REGEX.test(username)) {
     return true;
   }
 
+  // Step 2: Does the bio contain known spam keywords?
   const bio = parentElement.firstChild.children[1].children[1];
 
-  if (!bio) {
-    return false;
+  if (bio) {
+    const spans = Array.from(bio.getElementsByTagName("span"));
+    const spansText = spans.reduce((acc, curr) => {
+      acc = acc + curr.innerText;
+      return acc;
+    }, "");
+    const spamBio = BOT_BIO_REGEXS.some((regexp) => {
+      return regexp.test(spansText.toLowerCase().replace(/\s/g, ""));
+    });
+
+    if (spamBio) {
+      return true;
+    }
   }
 
-  const spans = Array.from(bio.getElementsByTagName("span"));
-  const spansText = spans.reduce((acc, curr) => {
-    acc = acc + curr.innerText;
-    return acc;
-  }, "");
+  // Step 3: Does the follower info look like a spam bot?
+  const followerInfo = await getFollowerInfo(parentElement);
+  const followRatio = followerInfo.followers / followerInfo.following;
 
-  return BOT_BIO_REGEXS.some((regexp) => {
-    return regexp.test(spansText.toLowerCase().replace(/\s/g, ""));
-  });
+  if (
+    followerInfo.following > BOT_NUM_FOLLOWING &&
+    followRatio < FOLLOWING_RATIO
+  ) {
+    return true;
+  }
+
+  return false;
 };
 
 const removeFollower = async (parentElement) => {
@@ -71,10 +124,12 @@ const removeFollower = async (parentElement) => {
   }
 };
 
-document
-  .querySelectorAll('[data-testid="UserCell"]')
-  .forEach((followerElement) => {
-    if (isBot(followerElement)) {
-      removeFollower(followerElement);
-    }
-  });
+const userCells = document.querySelectorAll('[data-testid="UserCell"]');
+
+for (let index in userCells) {
+  const followerElement = userCells[index];
+  if (await isBot(followerElement)) {
+    target(followerElement);
+    removeFollower(followerElement);
+  }
+}
