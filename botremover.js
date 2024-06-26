@@ -31,6 +31,16 @@ const stringToInt = (integerString) => {
   return parseInt(integerString.replace(",", "").replace(".", ""));
 };
 
+const isBotUsername = (username) => {
+  if (BOT_USERNAME_REGEX.test(username)) {
+    return true;
+  }
+
+  const numbers = username.match(/\d/g);
+  console.log(username, numbers);
+  return numbers && numbers.length > 5;
+};
+
 const getFollowerInfo = async (element) => {
   const link = element.querySelector("a");
   link.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
@@ -60,9 +70,9 @@ const getFollowerInfo = async (element) => {
 const isBot = async (parentElement) => {
   const link = parentElement.querySelector("a");
   const username = link.href.split("/").pop();
-  console.log("checking");
+
   // Step 1: Does username match username regex?
-  if (BOT_USERNAME_REGEX.test(username)) {
+  if (isBotUsername(username)) {
     return true;
   }
 
