@@ -17,7 +17,12 @@ const BOT_NUM_FOLLOWING = 2000; // max number of followers for FOLLOWING require
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Highlight / target an element
+// Highlight element (border to blue)
+const highlight = (element) => {
+  element.style.border = "1px solid #0000ff";
+};
+
+// Target an element (border to red)
 const target = (element) => {
   element.style.border = "1px solid #c52121";
 };
@@ -55,7 +60,7 @@ const getFollowerInfo = async (element) => {
 const isBot = async (parentElement) => {
   const link = parentElement.querySelector("a");
   const username = link.href.split("/").pop();
-
+  console.log("checking");
   // Step 1: Does username match username regex?
   if (BOT_USERNAME_REGEX.test(username)) {
     return true;
@@ -119,17 +124,29 @@ const removeFollower = async (parentElement) => {
 
     confirmButton.click();
     console.log(`Removed ${username}`);
+    parentElement.remove();
   } catch (error) {
     console.error(error.message);
   }
 };
 
-const userCells = document.querySelectorAll('[data-testid="UserCell"]');
-
-for (let index in userCells) {
-  const followerElement = userCells[index];
-  if (await isBot(followerElement)) {
-    target(followerElement);
-    removeFollower(followerElement);
+const main = async () => {
+  const userCells = document.querySelectorAll('[data-testid="UserCell"]');
+  for (let index in userCells) {
+    const followerElement = userCells[index];
+    highlight(followerElement);
+    if (await isBot(followerElement)) {
+      target(followerElement);
+      removeFollower(followerElement);
+    }
   }
-}
+};
+
+document.getElementById("runCodeButton").addEventListener("click", () => {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    chrome.scripting.executeScript({
+      target: { tabId: tabs[0].id },
+      function: main,
+    });
+  });
+});

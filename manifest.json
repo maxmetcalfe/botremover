@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Bot Remover",
-  "description": "Base Level Extension",
+  "description": "Remove bot followers from your x profile",
   "version": "1.0",
   "action": {
-    "default_popup": "client.html"
+    "default_popup": "popup.html"
   },
+  "permissions": ["activeTab", "scripting"],
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
+      "js": ["botremover.js"],
       "run_at": "document_end"
     }
   ]
