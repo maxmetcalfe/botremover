@@ -152,11 +152,12 @@ const main = async () => {
   }
 };
 
-document.getElementById("runCodeButton").addEventListener("click", () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    chrome.scripting.executeScript({
-      target: { tabId: tabs[0].id },
-      function: main,
-    });
-  });
-});
+main();
+// document.getElementById("runCodeButton").addEventListener("click", () => {
+//   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+//     chrome.scripting.executeScript({
+//       target: { tabId: tabs[0].id },
+//       function: main,
+//     });
+//   });
+// });
