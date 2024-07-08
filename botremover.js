@@ -10,6 +10,13 @@
  *   Warning: Be careful! This may remove non-bot users ;) see regex below.
  */
 
+console.log(`▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+█░▄▄▀█▀▄▄▀█▄░▄█░▄▄▀█░▄▄█░▄▀▄░█▀▄▄▀█▀███▀█░▄▄█░▄▄▀
+█░▄▄▀█░██░██░██░▀▀▄█░▄▄█░█▄█░█░██░██░▀░██░▄▄█░▀▀▄
+█▄▄▄▄██▄▄███▄██▄█▄▄█▄▄▄█▄███▄██▄▄████▄███▄▄▄█▄█▄▄
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+`);
+
 const BOT_USERNAME_REGEX = /\d{5,}$/; // spam bot username regex
 const BOT_BIO_REGEXS = [/usdt/gi, /camshat/gi, /letscam/gi, /myfreecontent/gi]; // spam bot bio keywords.
 const FOLLOWING_RATIO = 0.1; // ratio between followers / following
@@ -37,14 +44,13 @@ const isBotUsername = (username) => {
   }
 
   const numbers = username.match(/\d/g);
-  console.log(username, numbers);
   return numbers && numbers.length > 5;
 };
 
 const getFollowerInfo = async (element) => {
   const link = element.querySelector("a");
   link.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
-  await delay(1000);
+  await delay(1500);
   const card = document.querySelector('[data-testid="HoverCard"]');
 
   if (!card) return;
@@ -70,6 +76,8 @@ const getFollowerInfo = async (element) => {
 const isBot = async (parentElement) => {
   const link = parentElement.querySelector("a");
   const username = link.href.split("/").pop();
+
+  console.log(`Reviewing ${username}`);
 
   // Step 1: Does username match username regex?
   if (isBotUsername(username)) {
@@ -144,12 +152,19 @@ const main = async () => {
   const userCells = document.querySelectorAll('[data-testid="UserCell"]');
   for (let index in userCells) {
     const followerElement = userCells[index];
-    highlight(followerElement);
-    if (await isBot(followerElement)) {
-      target(followerElement);
-      removeFollower(followerElement);
+
+    try {
+      highlight(followerElement);
+      if (await isBot(followerElement)) {
+        target(followerElement);
+        removeFollower(followerElement);
+      }
+    } catch (e) {
+      console.log("error reviewing: ", followerElement, e);
     }
   }
+
+  console.log("botremover run complete!");
 };
 
 main();
