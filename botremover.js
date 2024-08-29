@@ -17,15 +17,11 @@ console.log(`▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄�
 ▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
 `);
 
-const BOT_USERNAME_REGEX = /\d{5,}$/; // spam bot username regex
-const BOT_BIO_REGEXS = [/usdt/gi, /camshat/gi, /letscam/gi, /myfreecontent/gi]; // spam bot bio keywords.
-const FOLLOWING_RATIO = 0.1; // ratio between followers / following
-const BOT_NUM_FOLLOWING = 2000; // max number of followers for FOLLOWING requirement to take effect.
-
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Highlight element (border to blue)
 const highlight = (element) => {
+  if (!element) return;
   element.style.border = "1px solid #0000ff";
 };
 
@@ -39,6 +35,7 @@ const stringToInt = (integerString) => {
 };
 
 const isBotUsername = (username) => {
+  const BOT_USERNAME_REGEX = /\d{5,}$/; // spam bot username regex
   if (BOT_USERNAME_REGEX.test(username)) {
     return true;
   }
@@ -50,7 +47,7 @@ const isBotUsername = (username) => {
 const getFollowerInfo = async (element) => {
   const link = element.querySelector("a");
   link.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
-  await delay(1500);
+  await delay(2000);
   const card = document.querySelector('[data-testid="HoverCard"]');
 
   if (!card) return;
@@ -86,13 +83,19 @@ const isBot = async (parentElement) => {
 
   // Step 2: Does the bio contain known spam keywords?
   const bio = parentElement.firstChild.children[1].children[1];
-
   if (bio) {
     const spans = Array.from(bio.getElementsByTagName("span"));
     const spansText = spans.reduce((acc, curr) => {
       acc = acc + curr.innerText;
       return acc;
     }, "");
+
+    const BOT_BIO_REGEXS = [
+      /usdt/gi,
+      /camshat/gi,
+      /letscam/gi,
+      /myfreecontent/gi,
+    ]; // spam bot bio keywords.
     const spamBio = BOT_BIO_REGEXS.some((regexp) => {
       return regexp.test(spansText.toLowerCase().replace(/\s/g, ""));
     });
@@ -103,9 +106,14 @@ const isBot = async (parentElement) => {
   }
 
   // Step 3: Does the follower info look like a spam bot?
+  // Example: User that follows a lot of people but doesn't have many followers.
   const followerInfo = await getFollowerInfo(parentElement);
+  if (!followerInfo.followers || !followerInfo.following) {
+    return false;
+  }
   const followRatio = followerInfo.followers / followerInfo.following;
-
+  const FOLLOWING_RATIO = 0.1; // ratio between followers / following
+  const BOT_NUM_FOLLOWING = 2000; // max number of followers for FOLLOWING requirement to take effect.
   if (
     followerInfo.following > BOT_NUM_FOLLOWING &&
     followRatio < FOLLOWING_RATIO
